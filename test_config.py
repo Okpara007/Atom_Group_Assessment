@@ -1,0 +1,7 @@
+# test_config.py
+
+from app.config import JWT_SECRET_KEY, JWT_EXPIRY, OPENAI_API_KEY
+
+print("JWT_SECRET_KEY:", JWT_SECRET_KEY)
+print("JWT_EXPIRY:", JWT_EXPIRY)
+print("OPENAI_API_KEY:", OPENAI_API_KEY)
