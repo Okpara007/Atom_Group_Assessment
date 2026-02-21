@@ -18,7 +18,7 @@ from app.services.queue_worker import (
     remove_document_from_queue,
 )
 import app.services.queue_worker as queue_worker
-from sse_starlette import EventSourceResponse  # For SSE streaming
+from sse_starlette import EventSourceResponse
 import json
 import os
 import shutil
@@ -45,7 +45,6 @@ def _safe_json(value):
     return value
 
 
-# POST /documents/upload - Upload one or more documents
 @router.post("/upload")
 async def upload_document(
     files: list[UploadFile] = File(...),
@@ -54,7 +53,7 @@ async def upload_document(
     if not files:
         raise HTTPException(status_code=400, detail="No files provided.")
 
-    os.makedirs(UPLOADS_DIR, exist_ok=True)  # Ensure the uploads directory exists
+    os.makedirs(UPLOADS_DIR, exist_ok=True)
 
     uploaded_documents = []
     errors = []
@@ -99,7 +98,6 @@ async def upload_document(
                 )
                 continue
 
-            # Store as /uploads/{document_id}/filename.ext
             document_upload_dir = os.path.join(UPLOADS_DIR, document_id)
             os.makedirs(document_upload_dir, exist_ok=True)
             file_path = os.path.join(document_upload_dir, filename)
@@ -147,7 +145,6 @@ async def upload_document(
     }
 
 
-# GET /documents - Placeholder for listing documents
 @router.get("/documents")
 async def list_documents(
     status: str | None = Query(default=None),
@@ -164,7 +161,6 @@ async def list_documents(
     return {"documents": [dict(row) for row in docs]}
 
 
-# GET /documents/stream - SSE stream for real-time updates
 @router.get("/documents/stream")
 async def stream_documents(
     request: Request,
@@ -173,8 +169,6 @@ async def stream_documents(
     async def event_generator():
         last_rowid = 0
 
-        # Send recent persisted status history on connect so clients
-        # can still see statuses even if they connect after processing.
         try:
             recent_events = get_recent_status_events(limit=50, owner_username=current_user)
             for event in recent_events:
@@ -257,7 +251,6 @@ async def stream_documents(
     return EventSourceResponse(event_generator())
 
 
-# GET /documents/{id} - Placeholder for retrieving document by ID
 @router.get("/documents/{id}")
 async def get_document(id: str, current_user: str = Depends(get_current_user)):
     document = get_document_by_id(id, owner_username=current_user)
@@ -274,7 +267,6 @@ async def get_document(id: str, current_user: str = Depends(get_current_user)):
     }
 
 
-# GET /documents/{id}/status - Placeholder for checking document processing status
 @router.get("/documents/{id}/status")
 async def get_document_status(id: str, current_user: str = Depends(get_current_user)):
     document = get_document_by_id(id, owner_username=current_user)
@@ -292,7 +284,6 @@ async def get_document_status(id: str, current_user: str = Depends(get_current_u
     }
 
 
-# DELETE /documents/{id} - Placeholder for deleting a document
 @router.delete("/documents/{id}")
 async def delete_document(id: str, current_user: str = Depends(get_current_user)):
     if is_currently_processing(id):
@@ -310,7 +301,6 @@ async def delete_document(id: str, current_user: str = Depends(get_current_user)
     if stored_path and os.path.exists(stored_path):
         os.remove(stored_path)
 
-    # Files are stored as /uploads/{document_id}/filename.ext, so remove parent folder.
     document_dir = os.path.join(UPLOADS_DIR, id)
     if os.path.isdir(document_dir):
         shutil.rmtree(document_dir, ignore_errors=True)

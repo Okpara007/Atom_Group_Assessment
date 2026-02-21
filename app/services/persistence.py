@@ -2,18 +2,15 @@ import sqlite3
 from app.config import DB_PATH
 import uuid
 
-# Connect to SQLite DB
 def get_db_connection():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row  
     return conn
 
-# Create tables if they don't exist
 def create_tables():
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    # Create documents table
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS documents (
         document_id TEXT PRIMARY KEY, 
@@ -28,13 +25,11 @@ def create_tables():
     )
     ''')
 
-    # Lightweight schema migration for existing DBs created before owner_username was added.
     cursor.execute("PRAGMA table_info(documents)")
     columns = {row[1] for row in cursor.fetchall()}
     if "owner_username" not in columns:
         cursor.execute("ALTER TABLE documents ADD COLUMN owner_username TEXT")
 
-    # Create status_events table
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS status_events (
         event_id TEXT PRIMARY KEY,   
@@ -47,7 +42,6 @@ def create_tables():
     )
     ''')
 
-    # Create analysis_results table
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS analysis_results (
         document_id TEXT PRIMARY KEY, 
@@ -63,10 +57,8 @@ def create_tables():
     conn.commit()
     conn.close()
 
-# Call create_tables on startup to ensure tables exist
 create_tables()
 
-# Function to insert document metadata
 def insert_document_metadata(
     document_id,
     owner_username,
@@ -95,7 +87,6 @@ def insert_document_metadata(
     conn.commit()
     conn.close()
 
-# Function to insert status event
 def insert_status_event(document_id, status, metadata=None, error_message=None):
     event_id = str(uuid.uuid4())
     conn = get_db_connection()
@@ -115,7 +106,6 @@ def insert_status_event(document_id, status, metadata=None, error_message=None):
     conn.commit()
     conn.close()
 
-# Function to insert analysis result
 def insert_analysis_result(document_id, summary, key_topics, sentiment, actionable_items, raw_model_output=None):
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -135,7 +125,6 @@ def insert_analysis_result(document_id, summary, key_topics, sentiment, actionab
     conn.commit()
     conn.close()
 
-# Function to get document metadata by ID
 def get_document_by_id(document_id, owner_username=None):
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -149,7 +138,6 @@ def get_document_by_id(document_id, owner_username=None):
         document = cursor.fetchone()
     return document
 
-# Function to get document status history
 def get_document_status_history(document_id, owner_username=None):
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -173,7 +161,6 @@ def get_document_status_history(document_id, owner_username=None):
     conn.close()
     return status_history
 
-# Function to get document analysis results
 def get_document_analysis_result(document_id, owner_username=None):
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -287,7 +274,7 @@ def get_recent_status_events(limit=50, owner_username=None):
         )
     rows = cursor.fetchall()
     conn.close()
-    # Return oldest -> newest for deterministic stream order.
+
     return list(reversed(rows))
 
 

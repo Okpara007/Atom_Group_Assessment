@@ -5,28 +5,22 @@ from app.services.extractor import ExtractionError, extract_text_from_document
 from app.services.llm import LLMError, analyze_document_with_retry
 from app.services.persistence import get_document_by_id, insert_analysis_result, insert_status_event
 
-# The queue for documents waiting to be processed
 document_queue = asyncio.Queue()
 current_document_id = None
 
-# Background worker function that continuously processes documents from the queue
 async def background_worker():
     global current_document_id
     while True:
-        # Get the next document from the queue (this is a blocking operation)
         document_id = await document_queue.get()
         current_document_id = document_id
 
         try:
-            # Log queue state.
             print(f"Queue Contents: {list(document_queue._queue)}")
 
-            # Fetch document metadata from the database.
             document = get_document_by_id(document_id)
             if not document:
                 raise RuntimeError("Document metadata not found in database.")
 
-            # pending -> processing
             insert_status_event(
                 document_id,
                 status="processing",
@@ -40,7 +34,6 @@ async def background_worker():
                 content_type=document["content_type"],
             )
 
-            # processing -> analyzing
             insert_status_event(
                 document_id,
                 status="analyzing",
@@ -57,7 +50,6 @@ async def background_worker():
                 raw_model_output=json.dumps(analysis["raw_model_output"]),
             )
 
-            # analyzing -> completed
             insert_status_event(
                 document_id,
                 status="completed",
@@ -74,15 +66,13 @@ async def background_worker():
                 error_message=str(e),
             )
         finally:
-            # Mark the task as done even on error and clear active marker.
             document_queue.task_done()
             current_document_id = None
 
-# Function to add a document to the queue for processing
 async def add_document_to_queue(document_id: str):
     await document_queue.put(document_id)
     print(f"Document {document_id} added to queue.")
-    print(f"Queue contents: {list(document_queue._queue)}")  # Log the current state of the queue
+    print(f"Queue contents: {list(document_queue._queue)}")
 
 
 def get_queue_snapshot():
